@@ -1,0 +1,8 @@
+
+	Overview of MARS:
+
+	Client.java -
+		The entry point of the program and or UI.
+
+	Catalog.java -
+		The part of the program that determine which files get copied.
