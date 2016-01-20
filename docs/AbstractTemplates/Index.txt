@@ -1,0 +1,11 @@
+
+INDEX:
+[name][location][source][size][hash][extra/tags]**
+[name][location][source][size][hash][extra/tags]
+[name][location][source][size][hash][extra/tags]
+[name][location][source][size][hash][extra/tags]
+...
+
+
+
+**Name, Location, Size, and Hash must be reflected in the Catalogues. All in all, this seems redundant but is motivated by speed and space, the archive may be ran over network from smaller devices.

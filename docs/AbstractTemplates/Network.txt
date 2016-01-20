@@ -1,0 +1,14 @@
+
+Network ID:
+[information to identify network is connected]*
+
+Subscriptions:
+[archive name][archive file location]
+[catalogue expression]**
+[catalogue expression]
+....
+[archive name][archive file location]
+[catalogue expression]
+[catalogue expression]
+...
+

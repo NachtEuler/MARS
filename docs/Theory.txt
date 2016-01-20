@@ -1,0 +1,22 @@
+
+	MARS Theoretically
+
+	Any collection of files managed by MARS is a MARS archive. This means client copies are not treated especially different. The MARS client manages onsite archives, and updates them with files from offsite or network archives. To facilitate use, files from an archive can be stored anywhere within a given filesystem, however moving or modifying files may damage the archive so they should ideally be under isolated roots.
+
+	Each archive is described by a collection of tables (at the core of which is a list of all files in the archive) and some files with instructions on it's management. This allows for archive managing operations (adding checking and copying files, generating catalogues from file-structures, updating catalogues, and identifying networks) to be handled on a common abstract structure.
+
+	Every file in an archive should have the following information recorded. It's name, relative location in the archive, source archive, and hashes or checksums. Every file can only have a single source, so while multiple archives may serve each other in complex structures the distribution of any one file is always tree-like. This a simple constraint that makes sense in smaller environments and ensures that master-versions are not overwritten by the MARS scheme.
+
+	Paths should be relative to simplify remote access, as devices such as external hard drives may be accessed differently when content is added. Resolving paths is the job of network records which tell a client archive where to find another archive.
+
+	Hashes are used to check whether files have been modified and may even play a roll in assigning names, finding or managing duplicates. Meanwhile names provide a way for two archives to agree a file is conceptually the same in the event that both the hash and location are updated.
+
+	Catalogues are files listing some of the content of an archive. Archives need not have catalogues, but large archives which feed others should. The motivation for keeping catalogues is to speed up access to selective content, rather than having to downloading and work with the entire archive list to get content. The list for each catalogue is similar to the master list except we may not need some information, such as the source of a file.
+
+	Networks are files that indicate where another MARS archive is and which catalogues to load from it. Archives need not have networks, but archives served by others should. Having networks stored with archive rather than the client program allows for multiple archives on a single machine to be managed more neatly. The catalogues in networks should allow for set operations on existing catalogues to allow the user archive control content more specifically that provided by the other archive.
+
+	Other files may be necessary for managing special issues as well, such as if dealing with files which are deleted or modified.
+
+	Finally, all of these files should be recorded together to describe the whole archive, thus a final file is need for this. This file should also contain properties for the client about when files should be overwritten.
+
+

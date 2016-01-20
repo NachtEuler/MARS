@@ -4,5 +4,22 @@
 	Client.java -
 		The entry point of the program and or UI.
 
-	Catalog.java -
-		The part of the program that determine which files get copied.
+	Archive.java -
+		The main description of archive, relative to a client, with
+		the ability to load tables or structures kept in separate files
+		to describe the needed parts of the archive while transferring
+		less data.
+
+	Index.java -
+		A list of files and their location in an archive.
+
+	Catalogue.java -
+		A list of files and their location for copying.
+
+	Element.java -
+		An entry in an list such an index or catalog with interacts
+		with a particular file.
+
+	Network.java -
+		A means of recording which archives from which locations serve
+		files to a given archive.

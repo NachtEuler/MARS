@@ -1,0 +1,16 @@
+
+Special:
+[is special present]
+([definition]*
+ [definition]
+ ...
+)
+
+CATALOGUE:
+[name][location][size][hash][extra/tags]**
+
+
+
+*If an archives catalogue should reflect a certain automated structure, such as loading from a certain directory or with certain tags. Having space for this mainly an extensibility issue.
+
+**Name, Location, Size, and Hash must be kept in sync with the Index. The extra information may vary depending on what extra information is used (probably a media-type and standard labels, e.g. artist, album). Again the issue is more preparing for future features and not coding myself into a corner.
