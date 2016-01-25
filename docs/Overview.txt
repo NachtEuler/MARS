@@ -15,11 +15,14 @@
 
 	Catalogue.java -
 		A list of files and their location for copying.
-
-	Element.java -
-		An entry in an list such an index or catalog with interacts
-		with a particular file.
+		Contains Catalgoue.Entry to describe individual elements.
 
 	Network.java -
 		A means of recording which archives from which locations serve
 		files to a given archive.
+
+	Glossary.java -
+		A means of provided a bijection between objects and ints. The
+		class consist of hash map and array to provide virtually O(1)
+		lookup in either direction. The application is to reduce space
+		of common items in files.

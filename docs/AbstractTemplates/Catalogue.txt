@@ -1,16 +1,42 @@
 
-Special:
-[is special present]
-([definition]*
- [definition]
- ...
-)
+PATH GLOSSARY:
+[URI path]
+[URI path]
+...
 
 CATALOGUE:
-[name][location][size][hash][extra/tags]**
+[id][path][filename][size][hash][extra]
+[id][path][filename][size][hash][extra]
+[id][path][filename][size][hash][extra]
+[id][path][filename][size][hash][extra]
+...
 
 
 
-*If an archives catalogue should reflect a certain automated structure, such as loading from a certain directory or with certain tags. Having space for this mainly an extensibility issue.
+*******************************************************************************
+NOTES:
+Definition has been moved elsewhere. If a catalogue has a definition it's not
+needed for looking up archived files.
 
-**Name, Location, Size, and Hash must be kept in sync with the Index. The extra information may vary depending on what extra information is used (probably a media-type and standard labels, e.g. artist, album). Again the issue is more preparing for future features and not coding myself into a corner.
+An [id] reflects an items unique number or position in the master index.
+
+A [path] is a small number (anticipating 16-bits) which indicates where in
+the path glossary the path is located. If the absolute path of file from a
+different devices is:
+ \\domain\volume\Music\Artist\Album\Track.mp3
+Then "Artist\Album\" is the URI path relative to the archive's root and is
+assigned a number by it's place in the glossary which is reused to locate all
+tracks on the album. Meanwhile "Track.mp3" is the filename.
+
+The [size] is the of file in bytes and [hash] a hash or checksum (probably md5)
+of the files data. These fields are used to check for changes in comparison to
+files in another archive.
+
+The [extra] data is not particularly specified, but may contain tags which are
+also read against a glossary.
+
+The [URI path],[filename] and [extra] fields are not fixed-width, and may need
+extra encoding.
+
+
+

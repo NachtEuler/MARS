@@ -1,6 +1,7 @@
 
-Rules for Updates:
-[rules for overwriting files]*
+Parameters:
+[display name]
+[overwrite behaviour]
 
 Master Index:
 [location of master index]
@@ -14,7 +15,3 @@ Network List:
 [network name][network file location]
 [network name][network file location]
 ...
-
-
-
-*I don't know if this needs to be in the archive file, but for instance when an archive is updated from an network we need to know what to do with changes, what to do when the appears to match and existing one in name and/or hash, etc. This is not particularly needed to load files form the archive, which is the only reason to maybe not have it here.

@@ -1,1 +1,3 @@
-These are some templates to prototype the archive content and decide what is stored or desired where. The goal (especially with catalogues) is to provide the access to an end-user without loading abundant data.
+These are some templates to prototype the archive content and decide what is
+stored or desired where. The goal (especially with catalogues) is to provide
+the access to an end-user without loading abundant data.

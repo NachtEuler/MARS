@@ -1,11 +1,22 @@
 
-INDEX:
-[name][location][source][size][hash][extra/tags]**
-[name][location][source][size][hash][extra/tags]
-[name][location][source][size][hash][extra/tags]
-[name][location][source][size][hash][extra/tags]
+PATH GLOSSARY:
+[URI path]
+[URI path]
+...
+
+CATALOGUE:
+[path][filename][size][hash][source][source_id][extra]
+[path][filename][size][hash][source][source_id][extra]
+[path][filename][size][hash][source][source_id][extra]
+[path][filename][size][hash][source][source_id][extra]
 ...
 
 
 
-**Name, Location, Size, and Hash must be reflected in the Catalogues. All in all, this seems redundant but is motivated by speed and space, the archive may be ran over network from smaller devices.
+*******************************************************************************
+NOTES:
+The Master Index is essentially a catalogue of all files, with the addition of
+[source] and [source_id]. The [source] will be encoded with a glossary as well,
+and gives a number for the archive from which the files was copied (or 0 for
+master copies) and [source_id] gives the unique id from that archive, to make
+it possible to identify a changed file without possibility of name's colliding.

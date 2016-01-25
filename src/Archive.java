@@ -24,10 +24,6 @@ public class Archive{
 		return null; //TODO
 	}
 
-	public Catalogue loadIndexAsCatalogue(){
-		return null; //TODO
-	}
-
 	public Catalogue loadCatalogue(int id){
 		return null; //TODO
 	}
