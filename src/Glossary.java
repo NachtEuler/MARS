@@ -2,6 +2,7 @@ package MARS;
 
 import java.util.HashMap;
 import java.util.ArrayList;
+import java.util.Iterator;
 
 //Glossary pairs (integer valued) symbols with (M valued) meanings.
 //The goal is to reduce file size in cases of redundancy.
@@ -62,6 +63,15 @@ public class Glossary<M>{
 	//returns meaning or null if not found
 	public M getMeaning(int symbol){
 		return list.get(symbol);
+	}
+
+	/*** SPECIAL ***/
+	//get details from ArrayList
+	public int size(){
+		return list.size();
+	}
+	public Iterator<M> iterator(){
+		return list.iterator();
 	}
 
 }
