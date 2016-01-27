@@ -4,8 +4,20 @@ package MARS;
 // global encoding and size issue addressed
 
 import java.nio.ByteBuffer;
+import java.nio.BufferOverflowException;
+import java.nio.BufferUnderflowException;
+
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.WritableByteChannel;
+import java.io.IOException;
+
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.function.Function;
+import java.util.function.BiConsumer;
 
 public class SIO{
 
@@ -89,165 +101,194 @@ public class SIO{
 
 
 
+	/*** Buffer Handling ***/
+	//recycle data currently in a ByteBuffer
+	public static void recycle(ByteBuffer buffer){
+		ByteBuffer old = buffer.slice(); //keep position of old data
+		buffer.clear();                  //reset position of buffer
+		buffer.put(old);                 //move old data to start
+	}
+
+
+
+	/*** Simplify Read/Write Operations on Collections ***/
+	/* Perform multiple iterations of read-then-get or put-then-write
+	 * from on a single channel and put/read ready buffer.
+	 *
+	 * Each iteration is a function involving a buffer and type and
+	 * performing solely get (for read) or put (for write) operations
+	 * on the buffer. Modifing mark, flipping, reseting, etc. are not
+	 * safe.
+	 *
+	 * For readAll, the buffer should begin and end ready for get and
+	 * full, as if read(buffer) has just been called.
+	 *
+	 * For writeAll, the buffer should begin and end ready for put and
+	 * empty, as if clear() has just been called.
+	 *
+	 * A collection is needed that supports add(), iterator(), size().
+	 */
+
+	//works with full buffer, takes data from buffer and reads in
+	public static <T> void readAll(Collection<T> col, Function<ByteBuffer,T> read,
+								ReadableByteChannel in, ByteBuffer buffer) throws IOException{
+
+		//intialize (buffer starts with data)
+		ByteBuffer buffer_saver;
+		T read_item = null;
+		//determine size to read
+		int items_remaing = read32(buffer);
+
+		//iterate bulk of data
+		while(items_remaing!=0){
+			//mark position and get from buffer
+			buffer.mark();
+			try{
+				read_item = read.apply(buffer);
+			}catch(BufferUnderflowException e){
+				//keep partial read, read in new data, try again
+				buffer.reset();
+				recycle(buffer);
+				in.read(buffer);
+				buffer.flip();
+				continue;
+			}
+			//store entry
+			col.add(read_item);
+			items_remaing--;
+		}//NOTE: loop may end with data for the next items data in buffer
+
+		//refill buffer (buffer ends full)
+		recycle(buffer);
+		in.read(buffer);
+		buffer.flip();
+	}
+
+	//works with empty buffer, fills buffer with data and writes out
+	public static <T> void writeAll(Collection<T> col, BiConsumer<ByteBuffer,T> write,
+								WritableByteChannel out, ByteBuffer buffer) throws IOException{
+
+		//intialize (buffer begins empty)
+		int items_remaining = col.size();
+		Iterator<T> itr = col.iterator();
+		T item;
+		if(!itr.hasNext()) return; //nothing to put/write
+		item = itr.next();
+		//write total size
+		write32(buffer, items_remaining);
+
+		//iterate to write bulk of data
+		while(items_remaining!=0){
+			//mark position and put to buffer
+			buffer.mark();
+			try{
+				write.accept(buffer,item);
+			}catch(BufferOverflowException e){
+				//truncate partial write, ouptut whole data, try again
+				buffer.reset();
+				buffer.flip();
+				out.write(buffer);
+				buffer.clear();
+				continue;
+			}
+			//move to next entry
+			items_remaining--;
+			if(!itr.hasNext()) break; //nothing left to put
+			item = itr.next();
+		}//NOTE: loop always ends with something in the buffer
+
+		//finish up (buffer ends empty)
+		buffer.flip();
+		out.write(buffer);
+		buffer.clear();
+	}
+
 	/*** TESTING ***/
 	//No libraries are imported above for this code making it easy to remove
 	public static void main(String[] args){
 		String file_name = args[0];
 		int seed = Integer.parseInt(args[1]);
-		int n=10;
+		int n=5;
+		java.util.Random rand = new java.util.Random(seed);
 
-		//allocate space for data and test input
-		int[] data32 = new int[n];
-		int[] data24 = new int[n];
-		int[] data16 = new int[n];
-		int[] data8 = new int[n];
-		byte[][] dataHash = new byte[n][16];
-		byte[][] dataArray = new byte[n][];
-		String[] dataString = new String[n];
+		//NOW TEST COLLECTIONS
+		//allocate
+		java.util.List<Integer> data32 = new java.util.ArrayList<Integer>(n);
+		java.util.List<Integer> data16 = new java.util.LinkedList<Integer>();
+		java.util.Set<String> dataString = new java.util.HashSet<String>(2*n);
 
-		int[] test32 = new int[n];
-		int[] test24 = new int[n];
-		int[] test16 = new int[n];
-		int[] test8 = new int[n];
-		byte[][] testHash = new byte[n][];
-		byte[][] testArray = new byte[n][];
-		String[] testString = new String[n];
+		java.util.List<Integer> test32 = new java.util.ArrayList<Integer>(n);
+		java.util.List<Integer> test16 = new java.util.LinkedList<Integer>();
+		java.util.Set<String> testString = new java.util.HashSet<String>(2*n);
 
-		//randomize and write data
-		java.util.Random r = new java.util.Random(seed);
+		//randomize
+		for(int i=n; i--!=0;)
+			data32.add(rand.nextInt());
+		for(int i=n; i--!=0;)
+			data16.add(rand.nextInt()&0xFFFF);
+		for(int i=n; i--!=0;)
+			dataString.add(randomString(rand));
+
+		//write
 		java.io.RandomAccessFile file = null;
 		java.nio.channels.FileChannel f = null;
+		ByteBuffer buffer = ByteBuffer.allocate(256);
 		try{
 			file = new java.io.RandomAccessFile(file_name, "rw");
 			f = file.getChannel();
-		}catch(Exception e){
-			System.out.println(e);
-			System.exit(1);
-		}
-		ByteBuffer buffer = ByteBuffer.allocate(200);
-		for(int i=0; i<n; i++){
-			write32(buffer, data32[i] = r.nextInt());
-			write24(buffer, data24[i] = r.nextInt()&0xFFFFFF);
-			write16(buffer, data16[i] = r.nextInt()&0xFFFF);
-			write8(buffer, data8[i] = r.nextInt()&0xFF);
-
-			r.nextBytes(dataHash[i]);
-			writeHash(buffer, dataHash[i]);
-			dataArray[i] = new byte[r.nextInt(20)];
-			r.nextBytes(dataArray[i]);
-			writeArray(buffer, dataArray[i]);
-
-			byte[] temp = new byte[r.nextInt(20)];
-			r.nextBytes(temp);
-			dataString[i] = new String(temp,StandardCharsets.UTF_8);
-			writeString(buffer, dataString[i]);
-
-			buffer.flip();
-			try{f.write(buffer);}
-			catch(Exception e){System.out.println(e);}
 			buffer.clear();
+			writeAll(data32,(ByteBuffer b, Integer i)->{write32(b,i.intValue());},f,buffer);
+			writeAll(data16,(ByteBuffer b, Integer i)->{write16(b,i.intValue());},f,buffer);
+			writeAll(dataString,(ByteBuffer b, String s)->{writeString(b,s);},f,buffer);
+			file.close();
 		}
-		try{ file.close();}
 		catch(Exception e){
-			System.out.println(e);
-		}
-
-		try{Thread.sleep(1000);}
-		catch(Exception e){}
-
-		//read in
-		try{
-			file = new java.io.RandomAccessFile(file_name, "r");
-			f = file.getChannel();
-		}catch(Exception e){
-			System.out.println(e);
+			e.printStackTrace(System.out);
 			System.exit(1);
 		}
-		int bytes_read = 0;
-		buffer = ByteBuffer.allocate(200);
-		int c=0;
-		try{ bytes_read = f.read(buffer); }
-		catch(Exception e){System.out.println(e);}
-		buffer.flip();
-		while(c<n && bytes_read!=-1){
-			buffer.mark();
-			try{
-				test32[c] = read32(buffer);
-				test24[c] = read24(buffer);
-				test16[c] = read16(buffer);
-				test8[c] = read8(buffer);
 
-				testHash[c] = readHash(buffer);
-				testArray[c] = readArray(buffer);
-
-				testString[c] = readString(buffer);
-				c++; //update when wholre record is read
-			}catch(java.nio.BufferUnderflowException e){
-				buffer.reset();
-				//TODO: revisit this!
-				//probably a very lazy way but I'm not sure how to do it with one buffer.
-				ByteBuffer temp = ByteBuffer.allocate(4096);
-				temp.put(buffer);
-				buffer = temp;
-				try{ bytes_read = f.read(buffer); }
-				catch(Exception x){System.out.println(x);}
-				buffer.flip();
-				System.out.println(buffer);
-				System.out.println(bytes_read);
-			}
+		//read
+		try{
+			file = new java.io.RandomAccessFile(file_name, "rw");
+			f = file.getChannel();
+			buffer.clear();
+			f.read(buffer);
+			buffer.flip();
+			readAll(test32,(ByteBuffer b)->{return read32(b);},f,buffer);
+			readAll(test16,(ByteBuffer b)->{return read16(b);},f,buffer);
+			readAll(testString,(ByteBuffer b)->{return readString(b);},f,buffer);
+			file.close();
 		}
-		try{ file.close();}
 		catch(Exception e){
-			System.out.println(e);
+			e.printStackTrace(System.out);
+			System.exit(1);
 		}
-		if(c!=n)
-			System.out.println("size error");
 
 		//compare
-		System.out.println("\n --- INT 32 --- ");
-		for(int i=n; i--!=0;)
-			System.out.printf(" %d %d\n",data32[i],test32[i]);
+		System.out.println(" --- INT 32 ARRAY LIST --- ");
+		for(Integer i : data32) System.out.printf("%11d ",i);
+		System.out.println();
+		for(Integer i : test32) System.out.printf("%11d ",i);
+		System.out.println("\n");
+		System.out.println(" --- INT 16 LINKED LIST --- ");
+		for(Integer i : data16) System.out.printf("%6d ",i);
+		System.out.println();
+		for(Integer i : test16) System.out.printf("%6d ",i);
+		System.out.println("\n");
+		System.out.println(" --- STRING HASH SET --- ");
+		for(String s : dataString) System.out.printf("%s ",s);
+		System.out.println();
+		for(String s : testString) System.out.printf("%s ",s);
+		System.out.println("\n");
 
-		System.out.println("\n --- INT 24 --- ");
-		for(int i=n; i--!=0;)
-			System.out.printf(" %d %d\n",data24[i],test24[i]);
+	}
 
-		System.out.println("\n --- INT 16 --- ");
-		for(int i=n; i--!=0;)
-			System.out.printf(" %d %d\n",data16[i],test16[i]);
-
-		System.out.println("\n --- INT 8 --- ");
-		for(int i=n; i--!=0;)
-			System.out.printf(" %d %d\n",data8[i],test8[i]);
-
-		System.out.println("\n --- HASH --- ");
-		for(int i=n; i--!=0;){
-			for(int j=0; j<dataHash[i].length; j++)
-				System.out.printf("%d ",dataHash[i][j]);
-			System.out.println();
-			for(int j=0; j<testHash[i].length; j++)
-				System.out.printf("%d ",testHash[i][j]);
-			System.out.println();
-			System.out.println();
-		}
-
-		System.out.println(" --- ARRAY --- ");
-		for(int i=n; i--!=0;){
-			for(int j=0; j<dataArray[i].length; j++)
-				System.out.printf("%d ",dataArray[i][j]);
-			System.out.println();
-			for(int j=0; j<testArray[i].length; j++)
-				System.out.printf("%d ",testArray[i][j]);
-			System.out.println();
-			System.out.println();
-		}
-
-
-		System.out.println(" --- STRING --- ");
-		for(int i=n; i--!=0;){
-			System.out.println(dataString[i]);
-			System.out.println(testString[i]);
-			System.out.println();
-		}
+	static String randomString(java.util.Random rand){
+		String ABC = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890._-";
+		int length = rand.nextInt(30);
+		StringBuilder building = new StringBuilder(30);
+		while(length--!=0)
+			building.append(ABC.charAt(rand.nextInt(ABC.length())));
+		return building.toString();
 	}
 }
