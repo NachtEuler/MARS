@@ -1,0 +1,69 @@
+TEST CATALOGUE - ONE RECORD
+
+Catalogue produced from a single record:
+ID  Path        FileName   Size  Hash  Extra
+ 1  Some\Path\  Some.File     2  0-15  0-23
+
+
+-----------------------------------------------
+Actual data in hex:
+
+00 00 00 01 00 0A 53 6F 6D 65 5C 50 61 74 68 5C
+00 00 00 01 00 00 00 01 00 00 00 09 53 6F 6D 65
+2E 46 69 6C 65 00 00 00 02 00 01 02 03 04 05 06
+07 08 09 0A 0B 0C 0D 0E 0F 00 18 00 01 02 03 04
+05 06 07 08 09 0A 0B 0C 0D 0E 0F 10 11 12 13 14
+15 16 17
+
+
+-----------------------------------------------
+Decoded by hand:
+
+
+00 00 00 01 00 0A 53 6F 6D 65 5C 50 61 74 68 5C
+ ----1----   -2-   -------------3-------------
+1. Number of paths in glossary - 4 bytes (1)
+2. Size of next path - 2 bytes (10 bytes)
+3. Path - 10 bytes* (Some\Path\)
+
+
+In this case we've read all entries in the path
+glossary and can move to the list of entries...
+
+
+00 00 00 01 00 00 00 01 00 00 00 09 53 6F 6D 65
+ ----1----   ----2----   -3-   -4-   -------5->
+1. Number of entries in list - 4 bytes (1)
+2. Next entry's ID in archive - 4 bytes (1)
+3. Path symbol - 2 bytes (0)
+4. Size of file name - 2 bytes (9 bytes)
+5. File name...
+
+
+2E 46 69 6C 65 00 00 00 02 00 01 02 03 04 05 06
+<-1----------   ----2----   ----------------3->
+
+1. File name - 9 bytes* (Some.File)
+2. File size - 4 bytes (2)
+3. Hash...
+
+
+07 08 09 0A 0B 0C 0D 0E 0F 00 18 00 01 02 03 04
+<----1-------------------   -2-   ----------3->
+1. Hash - 16 bytes (00 - 0F)(0-15 decimal)
+2. Size of extra data - 2 bytes (24 bytes)
+3. Extra data...
+
+
+05 06 07 08 09 0A 0B 0C 0D 0E 0F 10 11 12 13 14
+<----------------------1---------------------->
+1. Extra data...
+
+
+15 16 17
+<-1----
+1. Extra data - 24 bytes* (00-17)(0-23 decmial)
+
+
+*Sizes depend on data before them.
+
