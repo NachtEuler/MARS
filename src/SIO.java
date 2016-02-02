@@ -203,6 +203,21 @@ public class SIO{
 		buffer.clear();
 	}
 
+
+
+	/*** FORMATING ***/
+	//may not belong in SIO
+	private static final char[] hex =
+		{'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
+	public static String hexString(byte[] a){
+		StringBuilder build = new StringBuilder(2*a.length);
+		for(int i=0; i<a.length; i++){
+			build.append(hex[(a[i]&0xF0)>>>4]);
+			build.append(hex[a[i]&0x0F]);
+		}
+		return build.toString();
+	}
+
 	/*** TESTING ***/
 	//No libraries are imported above for this code making it easy to remove
 	public static void main(String[] args){

@@ -9,11 +9,21 @@ import java.nio.BufferOverflowException;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.Collection;
+import java.util.AbstractCollection;
 
-public class Catalogue{
+public class Catalogue extends AbstractCollection<Catalogue.Entry>{
+
+	/*** PARAMETERS ***/
+   //default sizes
+   private static final int DEFAULT_INITIAL_LIST_CAPACITY = 256;
+   private static final int DEFAULT_INITIAL_PATH_CAPACITY = 256;
+
+
 
 	/*** VARIABLES ***/
 	//reference to containing archive for absolute root, etc.
@@ -25,10 +35,46 @@ public class Catalogue{
 
 
 	/*** CONSTRUCTOR ***/
-	public Catalogue(int glossary_size, int list_size){
+
+	//Collections Recommended Constructors
+	public Catalogue(){
+		this(DEFAULT_INITIAL_LIST_CAPACITY, DEFAULT_INITIAL_PATH_CAPACITY);
+	}
+	public Catalogue(Collection<? extends Catalogue.Entry> c){
+		//optimal relationship?
+		this(c.size(), DEFAULT_INITIAL_PATH_CAPACITY);
+		for(Entry element:c)
+			add(element);
+	}
+
+	//Constructs backing Glossary and ArrayList
+	public Catalogue(int list_size, int glossary_size){
 		paths = new Glossary<String>(glossary_size);
 		list = new ArrayList<Entry>(list_size);
 	}
+
+
+
+	/*** COLLECTIONS METHODS ***/
+
+	public boolean add(Entry e){
+		//make sure we can add to the glossary first
+		if( paths.assign(e.path) == Glossary.CANNOT_ASSIGN)
+			return false;
+		//add to the list
+		if(list.add(e))
+			return true;
+		else
+			return false;//TODO: What if path accepts but list fails?
+	}
+	public int size(){
+		return list.size();
+	}
+	public Iterator<Entry> iterator(){
+		//TODO: Again, bad remove method
+		return list.iterator();
+	}
+
 
 
 	/*** MANAGEMENT ***/
@@ -37,6 +83,7 @@ public class Catalogue{
 		//TODO: update definition
 		//TODO: rebuild glossary
 	}
+
 
 
 	/*** STORAGE ***/
@@ -71,6 +118,34 @@ public class Catalogue{
 
 		file.close();
 	}
+
+
+
+	/*** FORMATING ***/
+	public void print(PrintStream out, boolean print_glossary){
+		out.println(" --- CATALOGUE PRINT ---");
+		out.println();
+		if(print_glossary){
+			out.println("   PATH GLOSSARY:");
+			paths.printTable(out);
+		}
+		out.println("   CATALOGUE LIST:");
+		out.println();
+		for(Entry e : list){
+			out.printf(" %10d : %10d : %s",
+					e.archive_id, e.file_size, SIO.hexString(e.hash));
+			out.println();
+			//TODO: choose the right seperator
+			out.printf(" %s\\%s", e.path, e.file_name);
+			out.println();
+			out.printf("%s",SIO.hexString(e.extra));
+			out.println();
+			out.println();
+		}
+		out.println();
+		out.println(" --- CATALOGUE PRINT ---");
+	}
+
 
 
 	/*** SINGLE ENTRY ***/
@@ -108,6 +183,11 @@ public class Catalogue{
 			SIO.writeHash(out,hash);
 			SIO.writeArray(out,extra);
 		}
+
+		/*** FORMATING ***/
+		public String toString(){
+			return file_name;//TODO
+		}
 	}
 
 
@@ -116,26 +196,106 @@ public class Catalogue{
 
 
 	/*** TESTING ***/
+	// [Directory] [seed] [catalogue_file1] [catalogue_file1] [print1] [print2]
 	public static void main(String[] args){
-		Entry X = new Entry();
-		X.archive_id=1;
-		X.path="Some\\Path\\";
-		X.file_name="Some.File";
-		X.file_size=2;
-		byte[] x_hash = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15};
-		X.hash = x_hash;
-		byte[] x_extra = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23};
-		X.extra = x_extra;
+		Catalogue C = new Catalogue();
+		int seed = Integer.parseInt(args[1]);
+		java.util.Random r = new java.util.Random(seed);
 
-		Catalogue C = new Catalogue(16,16);
-		C.list.add(X);
-		C.paths.add(X.path);
+		System.out.println("Building First Catalogue");
+		System.out.println("Searching "+args[0]);
+		//path walking stream borrowed from StackOverflow
+		try{ java.nio.file.Files.walk(java.nio.file.Paths.get(args[0]))
+        	 .filter(java.nio.file.Files::isRegularFile)
+        	 .forEach((p)->C.add(makeEntry(p,r)));
+		} catch(Exception e){ System.out.println(e); }
 
+		System.out.println("Writing "+args[2]);
 		try{
-			C.write(args[0]);
+			C.write(args[2]);
 		}catch(IOException e){
 			e.printStackTrace(System.out);
+			System.out.println("WRITE FAILED");
+			System.exit(1);
 		}
+
+		System.out.println("Building Second Catalogue");
+		Catalogue X = new Catalogue();
+
+		System.out.println("Reading "+args[2]);
+		try{
+			X.read(args[2]);
+		}catch(IOException e){
+			e.printStackTrace(System.out);
+			System.out.println("READ FAILED");
+			System.exit(1);
+		}
+
+		System.out.println("Print Readable Recods");
+		try{
+			FileOutputStream print1 = new FileOutputStream(args[4]);
+			FileOutputStream print2 = new FileOutputStream(args[5]);
+			C.print(new PrintStream(print1),true);
+			X.print(new PrintStream(print2),true);
+			print1.close();
+			print2.close();
+		}catch(Exception e){
+			e.printStackTrace(System.out);
+			System.out.println("PRINT FAILED");
+			System.exit(1);
+		}
+
+		System.out.println("Writing "+args[3]);
+		try{
+			X.write(args[3]);
+		}catch(IOException e){
+			e.printStackTrace(System.out);
+			System.out.println("WRITE FAILED");
+			System.exit(1);
+		}
+
+		System.out.println("DONE!\n");
+	}
+
+	//FOLLOWING CODE MAKES A FAIRLY REALISTIC (WE ANTICIPATE) ENTRY
+	//Only srchive's id and extra data does not come from actural files
+	static int md5_buf_size = 0x1000;
+	static ByteBuffer md5_buffer = ByteBuffer.allocate(md5_buf_size);
+   static java.security.MessageDigest md5;
+   static{
+   	try{
+   		md5 = java.security.MessageDigest.getInstance("MD5");
+   	}catch(Exception e){}
+   }
+	public static Entry makeEntry(java.nio.file.Path p, java.util.Random r){
+		Entry e = new Entry();
+		e.archive_id = r.nextInt(0x0FFFFFFF); //depends on archive
+		e.path = p.getParent().toString();
+		e.file_name = p.getFileName().toString();
+		java.io.File f = p.toFile();
+		e.file_size = (int)f.length();
+		try{
+			FileInputStream file = new FileInputStream(f);
+			ReadableByteChannel in = file.getChannel();
+
+			md5.reset();
+			int bytes_read = 0;
+
+			do{
+				md5_buffer.clear();
+				bytes_read = in.read(md5_buffer);
+				md5_buffer.flip();
+				md5.update(md5_buffer);
+			}while(bytes_read == md5_buf_size);
+
+			e.hash = md5.digest();
+	   } catch(Exception x){
+	   	x.printStackTrace(System.out);
+	   	System.exit(1);
+	   }
+	   e.extra = new byte[r.nextInt(0x100)];
+	   r.nextBytes(e.extra); //may depend on archive, we don't know yet
+	   return e;
 	}
 
 }

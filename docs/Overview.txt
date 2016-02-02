@@ -26,3 +26,7 @@
 		class consist of hash map and array to provide virtually O(1)
 		lookup in either direction. The application is to reduce space
 		of common items in files.
+
+	SIO.java -
+		Static methods for controling the way data is written and read
+		from bytebuffers. 

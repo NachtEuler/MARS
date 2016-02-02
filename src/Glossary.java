@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Collection;
 import java.util.AbstractCollection;
+import java.io.PrintStream;
 
 /* Glossary pairs (integer valued) symbols with (M valued) meanings,
  * conceptually creating a bijective map that is quick to convert
@@ -129,4 +130,15 @@ public class Glossary<M> extends AbstractCollection<M>{
 		return list.iterator();
 	}
 
+
+
+	/*** FORMATING ***/
+	public void printTable(PrintStream out){
+		out.println();
+		for(int i=0; i<list.size(); i++){
+			out.printf(" %5d : %s", i, list.get(i).toString());
+			out.println();
+		}
+		out.println();
+	}
 }
